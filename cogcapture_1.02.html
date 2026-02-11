@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CogCapture</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23c26a3a'/%3E%3Ctext x='50' y='70' font-family='sans-serif' font-size='60' font-weight='bold' fill='white' text-anchor='middle'%3E%43%3C/text%3E%3C/svg%3E" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f3ec;
+    --bg-surface: #ffffff;
+    --bg-elevated: #fff;
+    --bg-hover: #f0ebe2;
+    --bg-nav: #f0ebe2;
+    --border: #e0d8cc;
+    --border-subtle: #e8e1d5;
+    --text: #3a352e;
+    --text-secondary: #6b6558;
+    --text-muted: #b0a898;
+    --accent: #c26a3a;
+    --accent-dim: #a3552e;
+    --accent-glow: rgba(194, 106, 58, 0.10);
+    --action: #5a8a52;
+    --action-bg: rgba(90, 138, 82, 0.10);
+    --reference: #5a82aa;
+    --reference-bg: rgba(90, 130, 170, 0.10);
+    --done: #b0a898;
+    --danger: #b85450;
+    --danger-bg: rgba(184, 84, 80, 0.08);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --transition: 180ms ease;
+    --font: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.07);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 28px 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .logo { display: flex; align-items: center; gap: 10px; }
+
+  .logo-mark {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff;
+  }
+
+  .logo-text { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); }
+  .logo-text span { color: var(--accent); }
+
+  nav { display: flex; gap: 2px; background: var(--bg-nav); padding: 3px; border-radius: var(--radius); }
+
+  nav button {
+    font-family: var(--font); font-size: 13px; font-weight: 500; padding: 7px 16px;
+    border: none; background: transparent; color: var(--text-muted); border-radius: 6px;
+    cursor: pointer; transition: all var(--transition); position: relative;
+  }
+  nav button:hover { color: var(--text-secondary); }
+  nav button.active { background: var(--bg-surface); color: var(--text); box-shadow: var(--shadow-sm); }
+
+  nav button .badge {
+    position: absolute; top: 2px; right: 4px; background: var(--accent); color: #fff;
+    font-size: 10px; font-weight: 700; min-width: 16px; height: 16px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; padding: 0 4px;
+  }
+
+  main { flex: 1; padding: 32px 0; }
+
+  /* ─── CAPTURE ─── */
+  .capture-view {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 50vh;
+  }
+
+  .capture-prompt {
+    font-size: 13px; font-weight: 500; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 20px;
+  }
+
+  .capture-input-wrap { width: 100%; }
+
+  .capture-input {
+    width: 100%; font-family: var(--font); font-size: 20px; font-weight: 400;
+    padding: 20px 24px; background: var(--bg-surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius-lg); color: var(--text); outline: none;
+    transition: all var(--transition); resize: none; line-height: 1.5;
+    min-height: 70px; box-shadow: var(--shadow-sm);
+  }
+  .capture-input::placeholder { color: var(--text-muted); }
+  .capture-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow), var(--shadow-md); }
+
+  .capture-meta { width: 100%; display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; }
+
+  .tag-container {
+    flex: 1; position: relative;
+    background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius); box-shadow: var(--shadow-sm);
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    padding: 6px 10px; transition: all var(--transition);
+    min-height: 42px;
+  }
+  .tag-container:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+  
+  .tag-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--bg-nav); color: var(--text);
+    font-size: 13px; padding: 2px 8px; border-radius: 4px;
+  }
+  .tag-chip span { cursor: pointer; opacity: 0.5; font-size: 14px; margin-left: 2px; }
+  .tag-chip span:hover { opacity: 1; color: var(--danger); }
+
+  .tag-select-input {
+    flex: 1; min-width: 80px; font-family: var(--font); font-size: 14px; 
+    border: none; background: transparent; color: var(--text); outline: none;
+    padding: 4px 0;
+  }
+  .tag-select-input::placeholder { color: var(--text-muted); }
+
+  .tag-dropdown {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow-lg); z-index: 100;
+    max-height: 200px; overflow-y: auto; display: none;
+  }
+  .tag-dropdown.open { display: block; }
+
+  .tag-option {
+    padding: 9px 16px; font-size: 13px; cursor: pointer;
+    color: var(--text-secondary); transition: background var(--transition);
+  }
+  .tag-option:hover, .tag-option.highlighted { background: var(--bg-hover); color: var(--text); }
+  .tag-option.create-new { color: var(--accent); border-top: 1px solid var(--border-subtle); font-weight: 500; }
+
+  .capture-btn {
+    font-family: var(--font); font-size: 14px; font-weight: 600; padding: 10px 24px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim)); color: #fff;
+    border: none; border-radius: var(--radius); cursor: pointer;
+    transition: all var(--transition); white-space: nowrap; height: 42px;
+    box-shadow: 0 2px 8px rgba(194, 106, 58, 0.2);
+  }
+  .capture-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(194, 106, 58, 0.3); }
+  .capture-btn:active { transform: translateY(0); }
+
+  .capture-hint { margin-top: 16px; font-size: 12px; color: var(--text-muted); font-family: var(--mono); }
+  .capture-hint kbd {
+    background: var(--bg-surface); padding: 2px 6px; border-radius: 4px;
+    border: 1px solid var(--border-subtle); font-size: 11px; box-shadow: 0 1px 0 var(--border);
+  }
+
+  .capture-flash {
+    position: fixed; top: 20px; left: 50%;
+    transform: translateX(-50%) translateY(-60px);
+    background: var(--bg-surface); border: 1px solid var(--accent); color: var(--accent);
+    padding: 10px 24px; border-radius: var(--radius); font-size: 14px; font-weight: 500;
+    opacity: 0; transition: all 300ms ease; z-index: 200; pointer-events: none;
+    box-shadow: var(--shadow-md);
+  }
+  .capture-flash.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ─── REVIEW ─── */
+  .review-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .review-title { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+  .review-count { font-size: 13px; color: var(--text-muted); font-family: var(--mono); }
+
+  .review-empty { text-align: center; padding: 80px 20px; color: var(--text-muted); }
+  .review-empty-icon { font-size: 40px; margin-bottom: 16px; opacity: 0.4; color: var(--accent); }
+  .review-empty h3 { font-size: 17px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+  .review-empty p { font-size: 14px; }
+
+  .item-card {
+    background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 10px;
+    transition: all var(--transition); animation: slideIn 250ms ease; box-shadow: var(--shadow-sm);
+  }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .item-card:hover { border-color: var(--border); box-shadow: var(--shadow-md); }
+
+  .item-text-edit {
+    width: 100%; font-family: var(--font); font-size: 15px; line-height: 1.6;
+    margin-bottom: 12px; background: transparent; border: none; resize: none;
+    color: var(--text); padding: 0; outline: none; field-sizing: content; min-height: 24px;
+    border-radius: 4px; transition: background 0.2s;
+  }
+  .item-text-edit:focus { background: var(--bg-hover); padding: 4px; margin: -4px -4px 12px -4px; }
+  
+  .item-text { font-size: 15px; line-height: 1.6; margin-bottom: 12px; white-space: pre-wrap; word-break: break-word; }
+  .item-card.completed .item-text { color: var(--text-muted); text-decoration: line-through; opacity: 0.8; }
+
+  .item-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  .item-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); font-family: var(--mono); }
+
+  .item-tag {
+    display: inline-flex; align-items: center; padding: 3px 10px;
+    background: var(--accent-glow); color: var(--accent); border-radius: 20px;
+    font-size: 12px; font-weight: 500; font-family: var(--font);
+  }
+
+  .item-actions { display: flex; gap: 6px; }
+
+  .item-action-btn {
+    font-family: var(--font); font-size: 12px; font-weight: 500; padding: 5px 12px;
+    border: 1px solid var(--border-subtle); background: transparent;
+    border-radius: 6px; cursor: pointer; transition: all var(--transition);
+  }
+  .item-action-btn.action-type { color: var(--action); border-color: rgba(90, 138, 82, 0.3); }
+  .item-action-btn.action-type:hover { background: var(--action-bg); }
+  .item-action-btn.reference-type { color: var(--reference); border-color: rgba(90, 130, 170, 0.3); }
+  .item-action-btn.reference-type:hover { background: var(--reference-bg); }
+  .item-action-btn.done-type { color: var(--text-muted); }
+  .item-action-btn.done-type:hover { background: var(--bg-hover); }
+  
+  .item-action-btn.delete-type { color: var(--danger); border-color: rgba(184, 84, 80, 0.2); }
+  .item-action-btn.delete-type:hover { background: var(--danger-bg); }
+
+  .item-action-btn.complete-type { color: var(--action); border-color: rgba(90, 138, 82, 0.3); }
+  .item-action-btn.complete-type:hover { background: var(--action-bg); }
+
+  /* ─── RETRIEVE ─── */
+  .retrieve-controls { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+
+  .search-input {
+    flex: 1; min-width: 200px; font-family: var(--font); font-size: 14px;
+    padding: 10px 16px; background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius); color: var(--text); outline: none;
+    transition: all var(--transition); box-shadow: var(--shadow-sm);
+  }
+  .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+
+  .filter-input-wrap { flex: 1; position: relative; }
+  .filter-input {
+    width: 100%; font-family: var(--font); font-size: 14px; padding: 10px 16px;
+    background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius); color: var(--text); outline: none;
+    transition: all var(--transition); box-shadow: var(--shadow-sm);
+  }
+  .filter-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+
+  .type-filters { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+
+  .type-filter-btn {
+    font-family: var(--font); font-size: 12px; font-weight: 500; padding: 5px 12px;
+    border: 1px solid var(--border-subtle); background: transparent; border-radius: 20px;
+    cursor: pointer; transition: all var(--transition); color: var(--text-muted);
+  }
+  .type-filter-btn:hover { color: var(--text-secondary); }
+  .type-filter-btn.active-all { background: var(--bg-hover); color: var(--text); border-color: var(--border); }
+  .type-filter-btn.active-action { background: var(--action-bg); color: var(--action); border-color: rgba(90, 138, 82, 0.3); }
+  .type-filter-btn.active-reference { background: var(--reference-bg); color: var(--reference); border-color: rgba(90, 130, 170, 0.3); }
+  .type-filter-btn.active-unprocessed { background: var(--accent-glow); color: var(--accent); border-color: rgba(194, 106, 58, 0.3); }
+  .type-filter-btn.active-completed { background: var(--bg-nav); color: var(--text-secondary); border-color: var(--border); }
+
+  .retrieve-results-count { font-size: 12px; color: var(--text-muted); font-family: var(--mono); margin-bottom: 16px; }
+
+  .retrieve-item .item-text { font-size: 14px; margin-bottom: 10px; }
+
+  .item-type-badge {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; padding: 2px 8px; border-radius: 4px; font-family: var(--font);
+  }
+  .item-type-badge.action { background: var(--action-bg); color: var(--action); }
+  .item-type-badge.reference { background: var(--reference-bg); color: var(--reference); }
+  .item-type-badge.unprocessed { background: var(--accent-glow); color: var(--accent); }
+  .item-type-badge.completed { background: var(--bg-nav); color: var(--text-muted); }
+
+  /* ─── Settings ─── */
+  .settings-bar {
+    padding: 16px 0; border-top: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  }
+  .settings-bar .subtle-btn {
+    font-family: var(--mono); font-size: 11px; padding: 6px 12px;
+    border: 1px solid var(--border-subtle); background: transparent;
+    color: var(--text-muted); border-radius: 6px; cursor: pointer; transition: all var(--transition);
+  }
+  .settings-bar .subtle-btn:hover { border-color: var(--border); color: var(--text-secondary); background: var(--bg-hover); }
+  .settings-bar .subtle-btn.danger:hover { border-color: rgba(184, 84, 80, 0.3); color: var(--danger); background: var(--danger-bg); }
+  .stats-text { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+  .sync-status { width: 8px; height: 8px; border-radius: 50%; background: var(--border); display:inline-block; margin-right:6px; }
+  .sync-status.ok { background: var(--action); }
+  .sync-status.error { background: var(--danger); }
+  .sync-status.loading { background: var(--accent); animation: pulse 1s infinite; }
+  @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+  /* ─── Modal ─── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(247, 243, 236, 0.8);
+    backdrop-filter: blur(6px); z-index: 500; display: none;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 28px; max-width: 480px;
+    width: 100%; box-shadow: var(--shadow-lg);
+  }
+  .modal h3 { font-size: 17px; font-weight: 600; margin-bottom: 12px; }
+  .modal p { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6; }
+  .modal-input { width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid var(--border); border-radius: var(--radius); }
+  
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .modal-btn {
+    font-family: var(--font); font-size: 13px; font-weight: 500; padding: 8px 20px;
+    border-radius: var(--radius); cursor: pointer; transition: all var(--transition);
+    border: 1px solid var(--border); background: transparent; color: var(--text-secondary);
+  }
+  .modal-btn:hover { color: var(--text); background: var(--bg-hover); }
+  .modal-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .modal-btn.primary:hover { opacity: 0.9; }
+  .modal-btn.confirm-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 600px) {
+    .app { padding: 0 14px; }
+    header { padding: 20px 0 16px; flex-wrap: wrap; gap: 12px; }
+    .capture-input { font-size: 17px; padding: 16px 18px; }
+    .capture-meta { flex-direction: column; }
+    .capture-btn { width: 100%; text-align: center; }
+    nav button { padding: 7px 12px; font-size: 12px; }
+    .retrieve-controls { flex-direction: column; }
+    .item-footer { flex-direction: column; align-items: flex-start; }
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div class="logo">
+      <div class="logo-mark">C</div>
+      <div class="logo-text">Cog<span>Capture</span></div>
+    </div>
+    <nav id="nav">
+      <button class="active" data-view="capture">Capture</button>
+      <button data-view="review">Review <span class="badge hidden" id="review-badge">0</span></button>
+      <button data-view="retrieve">Retrieve</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="view-capture" class="capture-view">
+      <div class="capture-prompt">What's on your mind?</div>
+      <div class="capture-input-wrap">
+        <textarea class="capture-input" id="capture-input" placeholder="Quick thought, action item, or idea..." rows="2"></textarea>
+      </div>
+      <div class="capture-meta">
+        <div class="tag-container" id="tag-container">
+          <input type="text" class="tag-select-input" id="tag-input" placeholder="Add tags..." autocomplete="off">
+          <div class="tag-dropdown" id="tag-dropdown"></div>
+        </div>
+        <button class="capture-btn" id="capture-btn">Capture</button>
+      </div>
+      <div class="capture-hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to capture</div>
+    </section>
+
+    <section id="view-review" class="hidden">
+      <div class="review-header">
+        <h2 class="review-title">Review</h2>
+        <span class="review-count" id="review-count"></span>
+      </div>
+      <div id="review-list"></div>
+    </section>
+
+    <section id="view-retrieve" class="hidden">
+      <div class="retrieve-controls">
+        <input type="text" class="search-input" id="search-input" placeholder="Search captures...">
+        <div class="filter-input-wrap">
+          <input type="text" class="filter-input" id="filter-tag-input" placeholder="Filter by tag..." autocomplete="off">
+          <div class="tag-dropdown" id="filter-tag-dropdown"></div>
+        </div>
+      </div>
+      <div class="type-filters" id="type-filters">
+        <button class="type-filter-btn active-all" data-type="all">All</button>
+        <button class="type-filter-btn" data-type="unprocessed">Unprocessed</button>
+        <button class="type-filter-btn" data-type="action">Actions</button>
+        <button class="type-filter-btn" data-type="reference">Reference</button>
+        <button class="type-filter-btn" data-type="completed">Completed</button>
+      </div>
+      <div class="retrieve-results-count" id="retrieve-count"></div>
+      <div id="retrieve-list"></div>
+    </section>
+  </main>
+
+  <div class="settings-bar">
+    <div style="display:flex;align-items:center;">
+        <div id="sync-indicator" class="sync-status" title="Sync Status"></div>
+        <span class="stats-text" id="stats-text"></span>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="subtle-btn" id="cloud-btn">Cloud Sync</button>
+      <button class="subtle-btn" id="export-btn">Export</button>
+      <button class="subtle-btn" id="import-btn">Import</button>
+      <button class="subtle-btn danger" id="clear-btn">Clear</button>
+    </div>
+  </div>
+</div>
+
+<div class="capture-flash" id="capture-flash">✓ Captured</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title">Confirm</h3>
+    <p id="modal-body">Are you sure?</p>
+    <div id="modal-content"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="modal-cancel">Cancel</button>
+      <button class="modal-btn primary" id="modal-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="import-file" accept=".json" style="display:none">
+
+<script>
+const STORAGE_KEY = 'cogcapture_data';
+const CLOUD_KEY = 'https://script.google.com/macros/s/AKfycbzg31XK1ObxQRMh7bvAikE-fSYinip5p2yMp64C_4gRl1yCTCHlXcbFQzTy4aXIMievwA/exec';
+
+function loadData() {
+  try { 
+    const raw = localStorage.getItem(STORAGE_KEY); 
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return { items: [], tags: [] };
+}
+
+function saveData(d) { 
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); 
+    triggerCloudSync(d);
+}
+
+let data = loadData();
+let cloudUrl = localStorage.getItem(CLOUD_KEY) || '';
+
+// --- SYNC ENGINE ---
+const syncIndicator = document.getElementById('sync-indicator');
+let syncTimeout = null;
+
+function setSyncStatus(status) {
+    syncIndicator.className = 'sync-status ' + status;
+}
+
+if(cloudUrl) {
+    setSyncStatus('loading');
+    fetchCloudData();
+}
+
+function fetchCloudData() {
+    if (!cloudUrl) return;
+    setSyncStatus('loading');
+    fetch(cloudUrl)
+    .then(r => r.json())
+    .then(cloudData => {
+        if(cloudData && cloudData.items) {
+            // Merge strategy: Naive merge (Cloud wins if simplified, but let's just create a union)
+            // Realistically for single user: Cloud overwrites Local on load is safer to ensure consistency across devices
+            // But to be safe, let's keep local items that aren't in cloud
+            const cloudIds = new Set(cloudData.items.map(i=>i.id));
+            const localOnly = data.items.filter(i => !cloudIds.has(i.id));
+            
+            data.items = [...cloudData.items, ...localOnly];
+            // Sort by Date Descending
+            data.items.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+            
+            // Merge tags
+            cloudData.tags.forEach(t => { if (!data.tags.includes(t)) data.tags.push(t); });
+            
+            saveData(data); // This might trigger a save back, but that's okay (eventual consistency)
+            renderCurrentView();
+            setSyncStatus('ok');
+        }
+    })
+    .catch(e => {
+        console.error(e);
+        setSyncStatus('error');
+    });
+}
+
+function triggerCloudSync(d) {
+    if (!cloudUrl) return;
+    setSyncStatus('loading');
+    clearTimeout(syncTimeout);
+    syncTimeout = setTimeout(() => {
+        fetch(cloudUrl, {
+            method: 'POST',
+            body: JSON.stringify(d)
+        })
+        .then(() => setSyncStatus('ok'))
+        .catch(() => setSyncStatus('error'));
+    }, 1000); // Debounce saves by 1s
+}
+
+// --- LOGIC ---
+
+function addItem(text, tags) {
+  const item = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    text: text.trim(), tags: tags || [], type: 'unprocessed',
+    createdAt: new Date().toISOString(), processedAt: null
+  };
+  data.items.unshift(item);
+  item.tags.forEach(t => {
+    if (!data.tags.includes(t)) data.tags.push(t);
+  });
+  data.tags.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  saveData(data);
+  return item;
+}
+
+function updateItemText(id, newText) {
+  const item = data.items.find(i => i.id === id);
+  if (item) { item.text = newText.trim(); saveData(data); }
+}
+
+function updateItemType(id, type) {
+  const item = data.items.find(i => i.id === id);
+  if (item) { item.type = type; item.processedAt = new Date().toISOString(); saveData(data); }
+}
+
+function deleteItem(id) { data.items = data.items.filter(i => i.id !== id); saveData(data); }
+function getUnprocessed() { return data.items.filter(i => i.type === 'unprocessed'); }
+
+function search(query, tag, type) {
+  let r = data.items;
+  if (type && type !== 'all') r = r.filter(i => i.type === type);
+  if (tag) r = r.filter(i => i.tags.some(t => t.toLowerCase() === tag.toLowerCase()));
+  if (query) { 
+    const q = query.toLowerCase(); 
+    r = r.filter(i => i.text.toLowerCase().includes(q) || i.tags.some(t => t.toLowerCase().includes(q))); 
+  }
+  return r;
+}
+
+// --- UI ---
+const views = ['capture', 'review', 'retrieve'];
+let currentView = 'capture';
+
+function switchView(view) {
+  currentView = view;
+  views.forEach(v => document.getElementById(`view-${v}`).classList.toggle('hidden', v !== view));
+  document.querySelectorAll('#nav button').forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
+  if (view === 'review') renderReview();
+  if (view === 'retrieve') renderRetrieve();
+  if (view === 'capture') document.getElementById('capture-input').focus();
+  updateBadge(); updateStats();
+}
+
+document.querySelectorAll('#nav button').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
+
+const captureInput = document.getElementById('capture-input');
+const tagInput = document.getElementById('tag-input');
+const tagContainer = document.getElementById('tag-container');
+const tagDropdown = document.getElementById('tag-dropdown');
+const captureFlash = document.getElementById('capture-flash');
+let activeTags = [];
+
+function renderActiveTags() {
+  const chips = tagContainer.querySelectorAll('.tag-chip');
+  chips.forEach(c => c.remove());
+  activeTags.forEach((t, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'tag-chip';
+    chip.innerHTML = `${escapeHtml(t)} <span data-index="${i}">&times;</span>`;
+    tagContainer.insertBefore(chip, tagInput);
+  });
+}
+
+tagContainer.addEventListener('click', (e) => {
+  if (e.target.tagName === 'SPAN' && e.target.parentElement.classList.contains('tag-chip')) {
+    const idx = parseInt(e.target.dataset.index);
+    activeTags.splice(idx, 1);
+    renderActiveTags();
+  } else if (e.target === tagContainer) { tagInput.focus(); }
+});
+
+function addActiveTag(tagStr) {
+  const clean = tagStr.trim();
+  if (clean && !activeTags.includes(clean)) { activeTags.push(clean); renderActiveTags(); }
+  tagInput.value = '';
+}
+
+function doCapture() {
+  const text = captureInput.value.trim();
+  if (!text) { captureInput.focus(); return; }
+  if (tagInput.value.trim()) addActiveTag(tagInput.value);
+  addItem(text, activeTags);
+  captureInput.value = ''; captureInput.style.height = 'auto';
+  activeTags = []; renderActiveTags();
+  tagInput.value = ''; tagDropdown.classList.remove('open');
+  captureFlash.textContent = '✓ Captured';
+  captureFlash.classList.add('show');
+  setTimeout(() => captureFlash.classList.remove('show'), 1200);
+  captureInput.focus(); updateBadge(); updateStats();
+}
+
+document.getElementById('capture-btn').addEventListener('click', doCapture);
+captureInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); doCapture(); } });
+captureInput.addEventListener('input', () => { captureInput.style.height = 'auto'; captureInput.style.height = Math.max(70, captureInput.scrollHeight) + 'px'; });
+
+function setupTagAutocomplete(input, dropdown, onSelect) {
+  let highlighted = -1;
+  function render() {
+    const val = input.value.toLowerCase();
+    const matches = data.tags.filter(t => t.toLowerCase().includes(val));
+    let html = '';
+    matches.forEach((t, i) => { html += `<div class="tag-option" data-tag="${t}" data-index="${i}">${t}</div>`; });
+    if (val && !data.tags.some(t => t.toLowerCase() === val)) {
+      html += `<div class="tag-option create-new" data-tag="${input.value.trim()}" data-index="${matches.length}">+ Create "${input.value.trim()}"</div>`;
+    }
+    dropdown.innerHTML = html; highlighted = -1;
+    if (html) dropdown.classList.add('open'); else dropdown.classList.remove('open');
+  }
+  function selectOption(tag) { if (onSelect) { onSelect(tag); } else { input.value = tag; } dropdown.classList.remove('open'); }
+  input.addEventListener('input', render);
+  input.addEventListener('focus', render);
+  input.addEventListener('keydown', (e) => {
+    const options = dropdown.querySelectorAll('.tag-option');
+    if (e.key === 'Enter') {
+        if (dropdown.classList.contains('open') && highlighted >= 0) {
+            e.preventDefault(); selectOption(options[highlighted].dataset.tag);
+        } else if (input.value.trim()) { e.preventDefault(); if(onSelect) onSelect(input.value.trim()); }
+    } else if (e.key === 'ArrowDown') { 
+        if (!dropdown.classList.contains('open')) return;
+        e.preventDefault(); highlighted = Math.min(highlighted + 1, options.length - 1); 
+        options.forEach((o, i) => o.classList.toggle('highlighted', i === highlighted)); 
+    } else if (e.key === 'ArrowUp') { 
+        if (!dropdown.classList.contains('open')) return;
+        e.preventDefault(); highlighted = Math.max(highlighted - 1, 0); 
+        options.forEach((o, i) => o.classList.toggle('highlighted', i === highlighted)); 
+    } else if (e.key === 'Escape') { dropdown.classList.remove('open'); }
+    else if (e.key === ',' && onSelect) { e.preventDefault(); if (input.value.trim()) onSelect(input.value.trim()); }
+  });
+  dropdown.addEventListener('click', (e) => { const opt = e.target.closest('.tag-option'); if (opt) selectOption(opt.dataset.tag); });
+  document.addEventListener('click', (e) => { if (!input.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.remove('open'); });
+}
+
+setupTagAutocomplete(tagInput, tagDropdown, (tag) => { addActiveTag(tag); });
+const filterTagInput = document.getElementById('filter-tag-input');
+const filterTagDropdown = document.getElementById('filter-tag-dropdown');
+setupTagAutocomplete(filterTagInput, filterTagDropdown, (tag) => { filterTagInput.value = tag; renderRetrieve(); });
+filterTagInput.addEventListener('input', () => { if (!filterTagInput.value) renderRetrieve(); });
+
+function renderReview() {
+  const list = document.getElementById('review-list');
+  const items = getUnprocessed();
+  document.getElementById('review-count').textContent = `${items.length} unprocessed`;
+  if (items.length === 0) {
+    list.innerHTML = `<div class="review-empty"><div class="review-empty-icon">◇</div><h3>All clear</h3><p>Nothing to process. Go capture some ideas.</p></div>`; return;
+  }
+  list.innerHTML = items.map(item => `
+    <div class="item-card" data-id="${item.id}">
+      <textarea class="item-text-edit" data-id="${item.id}">${item.text}</textarea>
+      <div class="item-footer">
+        <div class="item-meta">
+          ${item.tags.map(t => `<span class="item-tag">${escapeHtml(t)}</span>`).join('')}
+          <span>${formatTime(item.createdAt)}</span>
+        </div>
+        <div class="item-actions">
+          <button class="item-action-btn action-type" data-action="action" data-id="${item.id}">Action</button>
+          <button class="item-action-btn reference-type" data-action="reference" data-id="${item.id}">Reference</button>
+          <button class="item-action-btn done-type" data-action="done" data-id="${item.id}">Dismiss</button>
+        </div>
+      </div>
+    </div>`).join('');
+  list.querySelectorAll('.item-action-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id, action = btn.dataset.action;
+      if (action === 'done') deleteItem(id); else updateItemType(id, action);
+      renderReview(); updateBadge(); updateStats();
+    });
+  });
+  list.querySelectorAll('textarea.item-text-edit').forEach(area => {
+    area.style.height = 'auto'; area.style.height = area.scrollHeight + 'px';
+    area.addEventListener('input', () => { area.style.height = 'auto'; area.style.height = area.scrollHeight + 'px'; });
+    area.addEventListener('blur', () => {
+        const id = area.dataset.id; const newText = area.value;
+        const originalItem = data.items.find(i => i.id === id);
+        if (originalItem && originalItem.text !== newText) { updateItemText(id, newText); }
+    });
+  });
+}
+
+let activeType = 'all';
+document.querySelectorAll('#type-filters .type-filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    activeType = btn.dataset.type;
+    document.querySelectorAll('#type-filters .type-filter-btn').forEach(b => b.className = 'type-filter-btn');
+    const cls = activeType === 'all' ? 'active-all' : activeType === 'action' ? 'active-action' : activeType === 'reference' ? 'active-reference' : activeType === 'completed' ? 'active-completed' : 'active-unprocessed';
+    btn.classList.add(cls); renderRetrieve();
+  });
+});
+document.getElementById('search-input').addEventListener('input', () => renderRetrieve());
+
+function renderRetrieve() {
+  const query = document.getElementById('search-input').value;
+  const tag = filterTagInput.value;
+  const results = search(query, tag, activeType);
+  const list = document.getElementById('retrieve-list');
+  document.getElementById('retrieve-count').textContent = `${results.length} item${results.length !== 1 ? 's' : ''}`;
+  if (results.length === 0) {
+    list.innerHTML = `<div class="review-empty"><div class="review-empty-icon">◇</div><h3>No results</h3><p>Try adjusting your search or filters.</p></div>`; return;
+  }
+  list.innerHTML = results.map(item => {
+    const isCompleted = item.type === 'completed';
+    const typeCls = item.type === 'action' ? 'action' : item.type === 'reference' ? 'reference' : item.type === 'completed' ? 'completed' : 'unprocessed';
+    const typeLabel = item.type === 'action' ? 'Action' : item.type === 'reference' ? 'Reference' : item.type === 'completed' ? 'Completed' : 'Unprocessed';
+    return `
+    <div class="item-card retrieve-item ${isCompleted?'completed':''}" data-id="${item.id}">
+      <div class="item-text">${escapeHtml(item.text)}</div>
+      <div class="item-footer">
+        <div class="item-meta">
+          <span class="item-type-badge ${typeCls}">${typeLabel}</span>
+          ${item.tags ? item.tags.map(t => `<span class="item-tag">${escapeHtml(t)}</span>`).join('') : ''}
+          <span>${formatTime(item.createdAt)}</span>
+        </div>
+        <div class="item-actions">
+          ${!isCompleted ? `<button class="item-action-btn complete-type" data-action="completed" data-id="${item.id}">Complete</button>` : ''}
+          <button class="item-action-btn delete-type" data-id="${item.id}">Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.item-action-btn.delete-type').forEach(btn => {
+    btn.addEventListener('click', () => { deleteItem(btn.dataset.id); renderRetrieve(); updateBadge(); updateStats(); });
+  });
+  list.querySelectorAll('.item-action-btn.complete-type').forEach(btn => {
+    btn.addEventListener('click', () => { updateItemType(btn.dataset.id, 'completed'); renderRetrieve(); updateBadge(); updateStats(); });
+  });
+}
+
+function updateBadge() {
+  const count = getUnprocessed().length;
+  const badge = document.getElementById('review-badge');
+  badge.textContent = count; badge.classList.toggle('hidden', count === 0);
+}
+
+function updateStats() {
+  const total = data.items.length;
+  document.getElementById('stats-text').textContent = `${total} items`;
+}
+
+// Modal handling
+let modalCallback = null;
+const modal = {
+    overlay: document.getElementById('modal-overlay'),
+    title: document.getElementById('modal-title'),
+    body: document.getElementById('modal-body'),
+    content: document.getElementById('modal-content'),
+    cancel: document.getElementById('modal-cancel'),
+    confirm: document.getElementById('modal-confirm'),
+    open: (title, body, htmlContent, onConfirm, confirmText = 'Confirm', isDanger = false) => {
+        modal.title.textContent = title;
+        modal.body.textContent = body;
+        modal.content.innerHTML = htmlContent || '';
+        modal.confirm.textContent = confirmText;
+        modal.confirm.className = isDanger ? 'modal-btn confirm-danger' : 'modal-btn primary';
+        modal.overlay.classList.add('open');
+        modalCallback = onConfirm;
+    },
+    close: () => { modal.overlay.classList.remove('open'); modalCallback = null; }
+};
+modal.cancel.addEventListener('click', modal.close);
+modal.confirm.addEventListener('click', () => { if(modalCallback) modalCallback(); modal.close(); });
+
+document.getElementById('export-btn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = `cogcapture-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+});
+
+document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file').click());
+document.getElementById('import-file').addEventListener('change', (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const imported = JSON.parse(reader.result);
+      if (imported.items && Array.isArray(imported.items)) {
+        const existingIds = new Set(data.items.map(i => i.id));
+        const newItems = imported.items.filter(i => !existingIds.has(i.id));
+        newItems.forEach(i => { if (!i.tags) i.tags = []; if (i.tag) i.tags.push(i.tag); });
+        data.items = [...newItems, ...data.items];
+        if (imported.tags) { imported.tags.forEach(t => { if (!data.tags.includes(t)) data.tags.push(t); }); }
+        saveData(data); renderCurrentView(); showFlash('Imported ' + newItems.length + ' new items');
+      }
+    } catch (err) { alert('Invalid file format'); }
+  };
+  reader.readAsText(file); e.target.value = '';
+});
+
+document.getElementById('clear-btn').addEventListener('click', () => {
+  modal.open('Clear all data?', 'This will permanently delete all your captures.', null, () => {
+    data = { items: [], tags: [] }; saveData(data); renderCurrentView();
+  }, 'Clear All', true);
+});
+
+document.getElementById('cloud-btn').addEventListener('click', () => {
+    const html = `<input type="text" id="cloud-url-input" class="modal-input" placeholder="https://script.google.com/macros/s/..." value="${cloudUrl}">`;
+    modal.open('Cloud Sync', 'Paste your Google Apps Script Web App URL below to sync data across devices.', html, () => {
+        const url = document.getElementById('cloud-url-input').value.trim();
+        if(url) {
+            localStorage.setItem(CLOUD_KEY, url);
+            cloudUrl = url;
+            fetchCloudData(); // Trigger initial sync
+        } else {
+            localStorage.removeItem(CLOUD_KEY);
+            cloudUrl = '';
+            setSyncStatus('');
+        }
+    }, 'Save Settings');
+});
+
+function escapeHtml(str) { if(typeof str !== 'string') return ''; const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
+function formatTime(iso) {
+  const d = new Date(iso), now = new Date(), diff = now - d;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+function showFlash(text) { captureFlash.textContent = '✓ ' + text; captureFlash.classList.add('show'); setTimeout(() => captureFlash.classList.remove('show'), 1500); }
+function renderCurrentView() { if (currentView === 'review') renderReview(); if (currentView === 'retrieve') renderRetrieve(); updateBadge(); updateStats(); }
+
+updateBadge(); updateStats(); captureInput.focus();
+</script>
+</body>
+</html>
