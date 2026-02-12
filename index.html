@@ -673,20 +673,46 @@ function sanitizeCloudItem(item) {
 
 function fetchCloudData() {
   if (!cloudUrl || !validateCloudUrl(cloudUrl)) return;
-  setSyncStatus('loading', 'Syncing...');
-  fetch(cloudUrl, { method: 'GET' })
-    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  setSyncStatus('loading', 'Pulling...');
+  fetch(cloudUrl, {
+    method: 'GET',
+    redirect: 'follow'  // Apps Script returns 302 → follow it
+  })
+    .then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
     .then(cloudData => {
+      // Check for Apps Script error response
+      if (cloudData.error) {
+        setSyncStatus('error', 'Server: ' + cloudData.error);
+        return;
+      }
       if (!validateCloudData(cloudData)) {
         setSyncStatus('error', 'Invalid cloud data');
         return;
       }
       const safeItems = cloudData.items.map(sanitizeCloudItem);
-      const cloudIds = new Set(safeItems.map(i => i.id));
-      const localOnly = data.items.filter(i => !cloudIds.has(i.id));
+      const cloudMap = new Map(safeItems.map(i => [i.id, i]));
+      const localMap = new Map(data.items.map(i => [i.id, i]));
 
-      _suppressSync = true; // Prevent sync loop
-      data.items = [...safeItems, ...localOnly];
+      // Merge: for items in both, keep whichever was modified more recently
+      const mergedMap = new Map();
+      for (const [id, item] of cloudMap) {
+        const local = localMap.get(id);
+        if (!local) { mergedMap.set(id, item); continue; }
+        // Compare processedAt or createdAt for recency
+        const cloudTime = new Date(item.processedAt || item.createdAt);
+        const localTime = new Date(local.processedAt || local.createdAt);
+        mergedMap.set(id, localTime > cloudTime ? local : item);
+      }
+      // Add local-only items
+      for (const [id, item] of localMap) {
+        if (!mergedMap.has(id)) mergedMap.set(id, item);
+      }
+
+      _suppressSync = true;
+      data.items = Array.from(mergedMap.values());
       data.items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
       if (Array.isArray(cloudData.tags)) {
@@ -698,6 +724,9 @@ function fetchCloudData() {
       saveData(data);
       _suppressSync = false;
 
+      // Push merged data back so both sides are in sync
+      pushToCloud(data);
+
       renderCurrentView();
       lastSyncTime = new Date();
       setSyncStatus('ok', 'Synced ' + formatTime(lastSyncTime.toISOString()));
@@ -705,7 +734,25 @@ function fetchCloudData() {
     .catch(e => {
       console.error('Cloud fetch error:', e);
       _suppressSync = false;
-      setSyncStatus('error', 'Sync failed: ' + e.message);
+      setSyncStatus('error', 'Pull failed: ' + e.message);
+    });
+}
+
+function pushToCloud(d) {
+  if (!cloudUrl || !validateCloudUrl(cloudUrl)) return Promise.resolve();
+  return fetch(cloudUrl, {
+    method: 'POST',
+    redirect: 'follow',
+    body: JSON.stringify(d)
+    // No Content-Type header — avoids CORS preflight entirely
+  })
+    .then(r => {
+      lastSyncTime = new Date();
+      setSyncStatus('ok', 'Synced ' + formatTime(lastSyncTime.toISOString()));
+    })
+    .catch(e => {
+      console.error('Cloud push error:', e);
+      setSyncStatus('error', 'Push failed: ' + e.message);
     });
 }
 
@@ -713,22 +760,7 @@ function triggerCloudSync(d) {
   if (!cloudUrl || !validateCloudUrl(cloudUrl)) return;
   setSyncStatus('loading', 'Saving...');
   clearTimeout(syncTimeout);
-  syncTimeout = setTimeout(() => {
-    fetch(cloudUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' }, // Apps Script needs this for CORS
-      body: JSON.stringify(d)
-    })
-      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); })
-      .then(() => {
-        lastSyncTime = new Date();
-        setSyncStatus('ok', 'Synced ' + formatTime(lastSyncTime.toISOString()));
-      })
-      .catch(e => {
-        console.error('Cloud sync error:', e);
-        setSyncStatus('error', 'Save failed');
-      });
-  }, 1500);
+  syncTimeout = setTimeout(() => pushToCloud(d), 1500);
 }
 
 // Auto-sync on tab focus
